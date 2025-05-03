@@ -26,7 +26,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       {/* Removed whitespace and comment here to fix hydration error */}
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true} // Add suppressHydrationWarning here too
+      >
         {children}
         <Toaster /> {/* Add Toaster component here */}
       </body>
