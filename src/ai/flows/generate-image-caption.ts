@@ -9,21 +9,12 @@
 
 import {ai} from '@/ai/ai-instance';
 import {z} from 'genkit';
+import type { GenerateImageCaptionInput, GenerateImageCaptionOutput } from '@/ai/types/caption-types'; // Import types
 
-const GenerateImageCaptionInputSchema = z.object({
-  photoDataUri: z
-    .string()
-    .describe(
-      "A photo to generate a caption for, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-});
-export type GenerateImageCaptionInput = z.infer<typeof GenerateImageCaptionInputSchema>;
+// Use imported types for schema validation
+import { GenerateImageCaptionInputSchema, GenerateImageCaptionOutputSchema } from '@/ai/types/caption-types';
 
-const GenerateImageCaptionOutputSchema = z.object({
-  caption: z.string().describe('A relevant caption for the image.'),
-});
-export type GenerateImageCaptionOutput = z.infer<typeof GenerateImageCaptionOutputSchema>;
-
+// Wrapper function remains the same
 export async function generateImageCaption(input: GenerateImageCaptionInput): Promise<GenerateImageCaptionOutput> {
   return generateImageCaptionFlow(input);
 }
@@ -31,23 +22,25 @@ export async function generateImageCaption(input: GenerateImageCaptionInput): Pr
 const prompt = ai.definePrompt({
   name: 'generateImageCaptionPrompt',
   input: {
-    schema: z.object({
-      photoDataUri: z
-        .string()
-        .describe(
-          "A photo to generate a caption for, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-        ),
-    }),
+    // Use the imported schema directly
+    schema: GenerateImageCaptionInputSchema,
   },
   output: {
-    schema: z.object({
-      caption: z.string().describe('A relevant caption for the image.'),
-    }),
+    // Use the imported schema directly
+    schema: GenerateImageCaptionOutputSchema,
   },
-  prompt: `You are an expert image captioner. Generate a relevant caption for the image provided.
+  prompt: `You are an expert image captioner. Generate a relevant, concise, and engaging caption for the image provided.
 
-Image: {{media url=photoDataUri}}`,
+Image: {{media url=photoDataUri}}
+
+Style Guide:
+- Keep captions relatively short (1-2 sentences).
+- Be descriptive but avoid stating the obvious unless it's poetic.
+- Match the tone of the image (e.g., playful, serene, dramatic).
+- Consider including relevant emotions or actions if depicted.
+`,
 });
+
 
 const generateImageCaptionFlow = ai.defineFlow<
   typeof GenerateImageCaptionInputSchema,
@@ -57,6 +50,42 @@ const generateImageCaptionFlow = ai.defineFlow<
   inputSchema: GenerateImageCaptionInputSchema,
   outputSchema: GenerateImageCaptionOutputSchema,
 }, async input => {
-  const {output} = await prompt(input);
-  return output!;
+   try {
+    console.log(`[generateImageCaptionFlow] Received request for image captioning.`); // Log start
+    const { output } = await prompt(input);
+    if (!output) {
+      // Handle cases where the prompt might return null/undefined output unexpectedly
+      console.error('[generateImageCaptionFlow] Prompt returned null or undefined output.');
+      throw new Error('Caption generation failed: No output received from AI model.');
+    }
+     // Ensure the output structure matches the schema before returning
+    if (typeof output.caption !== 'string') {
+       console.error('[generateImageCaptionFlow] Invalid output format received from AI model:', output);
+       throw new Error('Caption generation failed: Invalid output format from AI model.');
+    }
+    console.log('[generateImageCaptionFlow] Caption generated successfully.'); // Log success
+    return output;
+  } catch (error) {
+    // Log the detailed error on the server
+    console.error('[generateImageCaptionFlow] Error during caption generation:', error);
+
+    // Prepare a more informative error message for the client, including a digest if available
+    let clientErrorMessage = 'Failed to process image or generate caption.';
+    if (error instanceof Error) {
+        // Include a generic server error message for the client
+        clientErrorMessage += ' An internal server error occurred.';
+        // If the error object has a digest (common in Next.js server component errors), include it
+        // This helps Vercel logs link back to the specific server-side error instance.
+        const digest = (error as any).digest;
+        if (digest) {
+             clientErrorMessage += ` (Digest: ${digest})`;
+             console.error(`[generateImageCaptionFlow] Error Digest: ${digest}`);
+        }
+    }
+
+
+    // Throw a new error with the client-safe message (and potentially the digest)
+    // The original error with full stack trace is logged above for server-side debugging.
+    throw new Error(clientErrorMessage);
+  }
 });

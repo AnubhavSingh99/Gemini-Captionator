@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 
 export default function Home() {
   return (
-    <main className="container mx-auto flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8"> {/* Adjusted padding */}
-      <div className="w-full max-w-lg"> {/* Slightly reduced max-width */}
-        <h1 className="mb-4 text-center text-2xl font-semibold md:text-3xl text-foreground"> {/* Reduced margin-bottom and font size */}
-          Gemini Captionator
-        </h1>
+    // Use flexbox to center the content vertically and horizontally
+    // Add more padding for better spacing on larger screens
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4 md:p-12 lg:p-24">
+      {/* The w-full ensures it takes available width, max-w controls the maximum size */}
+      <div className="w-full max-w-md"> {/* Adjusted max-width if needed */}
+        {/* Removed the h1 title from here, letting the Card handle its title */}
         <CaptionGenerator />
       </div>
       <Toaster />

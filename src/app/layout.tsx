@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Gemini Captionator', // Updated title
-  description: 'AI-powered image captioning with Gemini', // Updated description
+  title: 'AI Image Caption Generator', // More descriptive title
+  description: 'Generate creative captions for your images using AI.', // Updated description
 };
 
 export default function RootLayout({
