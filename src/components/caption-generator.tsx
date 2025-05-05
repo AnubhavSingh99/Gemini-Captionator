@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { generateImageCaption } from "@/ai/flows/generate-image-caption";
+import { generateImageCaption, GenerateImageCaptionInput, GenerateImageCaptionOutput } from "@/ai/flows/generate-image-caption";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -63,8 +63,11 @@ export default function CaptionGenerator() {
       const dataUrl = await readFileAsDataURL(file);
       setImagePreviewUrl(dataUrl);
 
+      // Prepare input for AI
+      const input: GenerateImageCaptionInput = { photoDataUri: dataUrl };
+
       // Call AI caption generation
-      const result = await generateImageCaption({ photoDataUri: dataUrl });
+      const result: GenerateImageCaptionOutput = await generateImageCaption(input);
       if (result.caption) {
         setCaption(result.caption);
         setError(null); // Clear previous errors
@@ -96,17 +99,17 @@ export default function CaptionGenerator() {
   };
 
   return (
-    <Card className="w-full shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ImageIcon className="h-6 w-6 text-accent-foreground" />
-          Image Captioning
+    <Card className="w-full shadow-md border border-border/80 rounded-lg">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <ImageIcon className="h-5 w-5 text-primary" />
+          Image Captionator
         </CardTitle>
-        <CardDescription>
-          Upload an image and let AI generate a caption for you.
+        <CardDescription className="text-sm">
+          Upload an image to generate an AI-powered caption.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* File Input (Hidden) */}
         <input
           type="file"
@@ -120,69 +123,67 @@ export default function CaptionGenerator() {
         {/* Upload Area / Image Preview */}
         <div
           className={cn(
-            "flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-accent-foreground/50",
+            "flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-md border border-border bg-secondary/30 p-4 text-center transition-colors hover:border-primary/50", // Solid border, lighter bg
             isLoading && "cursor-wait opacity-70"
           )}
           onClick={!isLoading ? handleUploadClick : undefined} // Only allow click if not loading
         >
           {isLoading ? (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-12 w-12 animate-spin text-accent-foreground" />
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
               <p>Generating caption...</p>
-              <Skeleton className="mt-4 h-[200px] w-[300px] rounded-md" /> {/* Skeleton for image */}
+               {/* Smaller skeleton for image preview */}
+              <Skeleton className="mt-3 h-[150px] w-[250px] rounded-sm" />
             </div>
           ) : imagePreviewUrl ? (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-3">
               <Image
                 src={imagePreviewUrl}
                 alt="Uploaded preview"
-                width={400}
-                height={300}
-                className="max-h-[300px] w-auto rounded-md object-contain shadow-md"
-                data-ai-hint="uploaded image" // Placeholder hint
+                width={350} // Slightly smaller preview
+                height={250}
+                className="max-h-[250px] w-auto rounded-sm object-contain shadow-sm" // Reduced shadow
+                data-ai-hint="uploaded image"
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleUploadClick}
+                className="mt-2" // Add margin top
               >
-                <Upload className="mr-2" /> Change Image
+                <Upload className="mr-1.5 h-4 w-4" /> Change
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Upload className="h-12 w-12" />
-              <p>Click or drag image to upload</p>
-              <p className="text-xs">Supports JPG, PNG, WEBP, GIF</p>
+            <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+              <Upload className="h-10 w-10" />
+              <p className="font-medium">Click or drag to upload image</p>
+              <p className="text-xs">JPG, PNG, WEBP, GIF supported</p>
             </div>
           )}
         </div>
 
         {/* Error Display */}
         {error && !isLoading && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="rounded-md">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* Caption Display */}
+        {/* Caption Display - Simplified */}
         {caption && !isLoading && (
-          <Card className="bg-secondary/50">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Generated Caption</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-foreground">{caption}</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-md border border-border bg-card p-4 shadow-sm">
+             <h3 className="mb-2 text-md font-semibold text-foreground">Generated Caption</h3>
+             <p className="text-sm text-foreground/90">{caption}</p>
+          </div>
         )}
 
-         {/* Initial state prompt or loading state for caption */}
+         {/* Initial state prompt */}
         {!caption && !error && !isLoading && !imagePreviewUrl && (
-           <div className="text-center text-muted-foreground">
-              Upload an image to see the generated caption here.
+           <div className="text-center text-sm text-muted-foreground py-4">
+              Upload an image to view the generated caption.
             </div>
         )}
       </CardContent>

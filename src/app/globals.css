@@ -2,38 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    /* Neutral Grays */
+    /* Minimal Light Theme */
     --background: 0 0% 100%; /* White */
-    --foreground: 240 10% 3.9%; /* Dark Gray */
+    --foreground: 240 6% 10%; /* Dark Gray */
+
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 240 6% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%; /* Very Dark Gray (almost black) */
-    --primary-foreground: 0 0% 98%; /* White */
-    --muted: 240 4.8% 95.9%; /* Light Gray */
-    --muted-foreground: 240 3.8% 46.1%; /* Mid Gray */
-    --border: 240 5.9% 90%; /* Light Gray Border */
-    --input: 240 5.9% 90%; /* Light Gray Input */
+    --popover-foreground: 240 6% 10%;
 
-    /* Soft Blues */
-    --secondary: 210 40% 96.1%; /* Very Light Blue */
-    --secondary-foreground: 240 5.9% 10%; /* Dark Gray */
-    --ring: 217.2 91.2% 59.8%; /* Standard Blue Ring (Tailwind blue-500) */
+    --primary: 240 5% 35%; /* Dark Gray */
+    --primary-foreground: 0 0% 98%; /* Almost White */
 
-    /* Teal Accent */
-    --accent: 180 100% 96%; /* Very Light Teal (for hover states) */
-    --accent-foreground: 180 100% 25.1%; /* Teal (#008080) */
+    --secondary: 240 5% 96%; /* Very Light Gray */
+    --secondary-foreground: 240 5% 35%; /* Dark Gray */
 
-    /* Destructive (Standard Red) */
+    --muted: 240 5% 90%; /* Light Gray */
+    --muted-foreground: 240 4% 46%; /* Mid Gray */
+
+    --accent: 210 20% 96%; /* Soft Gray-Blue */
+    --accent-foreground: 210 20% 30%; /* Darker Gray-Blue */
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 90%; /* Light Gray Border */
+    --input: 240 6% 90%; /* Light Gray Input */
+    --ring: 210 30% 55%; /* Slightly Saturated Blue for Ring */
 
     /* Charts (Keep default or adjust if needed) */
     --chart-1: 12 76% 61%;
@@ -44,43 +42,46 @@ body {
 
     --radius: 0.5rem;
 
-    /* Sidebar (Adjust if sidebar is used, keep consistent for now) */
-    --sidebar-background: 240 4.8% 95.9%; /* Light Gray */
-    --sidebar-foreground: 240 5.9% 10%; /* Dark Gray */
-    --sidebar-primary: 180 100% 25.1%; /* Teal */
-    --sidebar-primary-foreground: 0 0% 98%; /* White */
-    --sidebar-accent: 180 100% 96%; /* Light Teal */
-    --sidebar-accent-foreground: 180 100% 25.1%; /* Teal */
-    --sidebar-border: 240 5.9% 90%; /* Light Gray Border */
-    --sidebar-ring: 217.2 91.2% 59.8%; /* Standard Blue Ring */
+    /* Sidebar (Adjusted for consistency) */
+    --sidebar-background: 240 5% 96%; /* Very Light Gray */
+    --sidebar-foreground: 240 6% 10%; /* Dark Gray */
+    --sidebar-primary: 210 20% 30%; /* Darker Gray-Blue */
+    --sidebar-primary-foreground: 0 0% 98%; /* Almost White */
+    --sidebar-accent: 210 20% 90%; /* Lighter Gray-Blue */
+    --sidebar-accent-foreground: 210 20% 25%; /* Dark Gray-Blue */
+    --sidebar-border: 240 6% 85%; /* Slightly Darker Border */
+    --sidebar-ring: 210 30% 55%; /* Ring Blue */
   }
+
   .dark {
-    /* Dark Theme - Neutral Grays */
-    --background: 240 10% 3.9%; /* Very Dark Gray */
-    --foreground: 0 0% 98%; /* White */
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%; /* White */
-    --primary-foreground: 240 5.9% 10%; /* Very Dark Gray */
-    --muted: 240 3.7% 15.9%; /* Dark Gray */
-    --muted-foreground: 240 5% 64.9%; /* Mid Gray */
-    --border: 240 3.7% 15.9%; /* Dark Gray Border */
-    --input: 240 3.7% 15.9%; /* Dark Gray Input */
+    /* Minimal Dark Theme */
+    --background: 240 6% 10%; /* Very Dark Gray */
+    --foreground: 0 0% 96%; /* Light Gray/Off-white */
 
-    /* Dark Theme - Soft Blues */
-    --secondary: 210 40% 14.9%; /* Dark Blue */
-    --secondary-foreground: 0 0% 98%; /* White */
-    --ring: 217.2 91.2% 59.8%; /* Standard Blue Ring */
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 96%;
 
-    /* Dark Theme - Teal Accent */
-    --accent: 180 100% 12%; /* Dark Teal (for hover states) */
-    --accent-foreground: 180 90% 60%; /* Lighter Teal */
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 96%;
 
-    /* Dark Theme - Destructive (Standard Red) */
+    --primary: 0 0% 98%; /* Almost White */
+    --primary-foreground: 240 6% 10%; /* Very Dark Gray */
+
+    --secondary: 240 5% 15%; /* Slightly Lighter Dark Gray */
+    --secondary-foreground: 0 0% 98%; /* Almost White */
+
+    --muted: 240 4% 20%; /* Darker Gray */
+    --muted-foreground: 240 4% 65%; /* Mid-Light Gray */
+
+    --accent: 210 20% 15%; /* Dark Desaturated Blue */
+    --accent-foreground: 210 20% 70%; /* Lighter Gray-Blue */
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 20%; /* Dark Gray Border */
+    --input: 240 4% 20%; /* Dark Gray Input */
+    --ring: 210 30% 55%; /* Ring Blue (same as light) */
 
     /* Dark Theme - Charts (Adjust as needed) */
     --chart-1: 220 70% 50%;
@@ -90,14 +91,14 @@ body {
     --chart-5: 340 75% 55%;
 
     /* Sidebar (Dark) */
-    --sidebar-background: 240 5.9% 10%; /* Very Dark Gray */
-    --sidebar-foreground: 0 0% 98%; /* White */
-    --sidebar-primary: 180 90% 60%; /* Lighter Teal */
-    --sidebar-primary-foreground: 240 5.9% 10%; /* Very Dark Gray */
-    --sidebar-accent: 180 100% 12%; /* Dark Teal */
-    --sidebar-accent-foreground: 180 90% 60%; /* Lighter Teal */
-    --sidebar-border: 240 3.7% 15.9%; /* Dark Gray Border */
-    --sidebar-ring: 217.2 91.2% 59.8%; /* Standard Blue Ring */
+    --sidebar-background: 240 5% 12%; /* Slightly Lighter Dark Gray */
+    --sidebar-foreground: 0 0% 96%; /* Light Gray */
+    --sidebar-primary: 210 20% 70%; /* Lighter Gray-Blue */
+    --sidebar-primary-foreground: 240 6% 10%; /* Very Dark Gray */
+    --sidebar-accent: 210 20% 20%; /* Darker Gray-Blue */
+    --sidebar-accent-foreground: 210 20% 80%; /* Even Lighter Gray-Blue */
+    --sidebar-border: 240 4% 25%; /* Slightly Lighter Dark Border */
+    --sidebar-ring: 210 30% 55%; /* Ring Blue */
   }
 }
 
