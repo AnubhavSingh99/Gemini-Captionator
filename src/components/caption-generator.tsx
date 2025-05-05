@@ -1,16 +1,21 @@
+
 "use client";
 
 import { type ChangeEvent, useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Upload, Image as ImageIcon, Loader2, AlertCircle } from "lucide-react";
+import { Upload, Image as ImageIcon, Loader2, AlertCircle, Languages, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageCaption } from "@/ai/flows/generate-image-caption";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { GenerateImageCaptionInput, GenerateImageCaptionOutput } from '@/ai/types/caption-types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
 
 // Helper function to read file as Data URL
 const readFileAsDataURL = (file: File): Promise<string> => {
@@ -22,6 +27,9 @@ const readFileAsDataURL = (file: File): Promise<string> => {
   });
 };
 
+type CaptionStyle = "default" | "formal" | "humorous" | "poetic";
+type CaptionLanguage = "en" | "es" | "fr" | "de"; // Example languages
+
 export default function CaptionGenerator() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
@@ -29,6 +37,9 @@ export default function CaptionGenerator() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>("default");
+  const [language, setLanguage] = useState<CaptionLanguage>("en");
+  const [context, setContext] = useState<string>("");
 
   // Reset state when component mounts or when imagePreviewUrl changes externally (less likely but safe)
   useEffect(() => {
@@ -36,7 +47,7 @@ export default function CaptionGenerator() {
     if (!imagePreviewUrl) {
         setCaption(null);
         setError(null);
-        // Don't reset isLoading here, as it's managed within handleFileChange
+        // Don't reset isLoading here, as it's managed within handleFileChange/handleGenerateClick
     }
   }, [imagePreviewUrl]);
 
@@ -45,11 +56,11 @@ export default function CaptionGenerator() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset previous state for the new upload attempt
-    setImagePreviewUrl(null); // Clear previous preview immediately
+    // Reset previous caption/error state for the new upload attempt
     setCaption(null);
     setError(null);
-    setIsLoading(true); // Indicate processing has started
+    setIsLoading(true); // Indicate processing has started *for the file upload*
+    setImagePreviewUrl(null); // Clear previous preview immediately
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
@@ -61,7 +72,6 @@ export default function CaptionGenerator() {
         description: errorMsg,
         variant: "destructive",
       });
-      // Clear the file input so the user can select the same file again if needed
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -81,215 +91,328 @@ export default function CaptionGenerator() {
       return;
     }
 
-
-    let dataUrl = '';
     try {
       // Show preview quickly
-      dataUrl = await readFileAsDataURL(file);
-      setImagePreviewUrl(dataUrl); // Show preview before calling AI
-
-      // Prepare input for AI
-      const input: GenerateImageCaptionInput = { photoDataUri: dataUrl };
-
-      // Call AI caption generation - this is the async server action
-      const result: GenerateImageCaptionOutput = await generateImageCaption(input);
-
-      if (result && result.caption) {
-        setCaption(result.caption);
-        setError(null); // Clear previous errors on success
-      } else {
-         // This case might occur if the flow resolves but returns an unexpected structure
-         throw new Error("Received an invalid response from the caption service.");
-      }
+      const dataUrl = await readFileAsDataURL(file);
+      setImagePreviewUrl(dataUrl); // Show preview
+      setError(null); // Clear upload errors on successful preview
     } catch (err) {
-      console.error("Error during caption generation process:", err); // Log the actual error object to console
-
-      // Extract a user-friendly error message from the caught error.
-      // The server flow now includes a digest in the error message for production debugging.
-      let userErrorMessage = "Failed to generate caption due to an unexpected error.";
-       if (err instanceof Error) {
-            // Use the message directly from the error thrown by the server flow
-            // This message might include the digest in production.
-            userErrorMessage = err.message;
-       }
-
-      setError(userErrorMessage);
-      setCaption(null); // Ensure caption is cleared on error
-      // Consider keeping the image preview even if captioning fails
-      // setImagePreviewUrl(null); // Optionally clear preview on error
-
-      toast({
-        title: "Generation Error",
-        // Display the potentially detailed error message (including digest) in the toast as well
-        description: userErrorMessage,
-        variant: "destructive",
-        duration: 9000, // Give more time to read potentially longer error messages
-      });
+        console.error("Error reading file:", err);
+        const errorMsg = "Failed to read or display the selected image.";
+        setError(errorMsg);
+        setImagePreviewUrl(null); // Ensure preview is cleared on read error
+         toast({
+            title: "File Read Error",
+            description: errorMsg,
+            variant: "destructive",
+        });
     } finally {
-      setIsLoading(false); // Ensure loading indicator stops
-      // Reset file input value to allow re-uploading the same file if desired
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+        setIsLoading(false); // Stop loading indicator after file processing
+         // Reset file input value AFTER processing, allowing re-upload of the same file
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
     }
   };
+
+  const handleGenerateClick = async () => {
+      if (!imagePreviewUrl) {
+          toast({
+            title: "No Image",
+            description: "Please upload an image first.",
+            variant: "destructive",
+          });
+          return;
+      }
+
+      setIsLoading(true); // Start loading for caption generation
+      setCaption(null); // Clear previous caption
+      setError(null); // Clear previous error
+
+      try {
+          // Prepare input for AI
+          const input: GenerateImageCaptionInput = {
+              photoDataUri: imagePreviewUrl,
+              style: captionStyle,
+              language: language,
+              context: context || undefined, // Send context only if provided
+          };
+
+          // Call AI caption generation - this is the async server action
+          const result: GenerateImageCaptionOutput = await generateImageCaption(input);
+
+          if (result && result.caption) {
+            setCaption(result.caption);
+            setError(null); // Clear previous errors on success
+             toast({
+                title: "Caption Generated!",
+                description: "Your AI-powered caption is ready.",
+            });
+          } else {
+             // This case might occur if the flow resolves but returns an unexpected structure
+             throw new Error("Received an invalid response from the caption service.");
+          }
+      } catch (err) {
+          console.error("Error during caption generation process:", err); // Log the actual error object to console
+
+          // Extract a user-friendly error message from the caught error.
+          let userErrorMessage = "Failed to generate caption due to an unexpected error.";
+           if (err instanceof Error) {
+                // Use the message directly from the error thrown by the server flow
+                userErrorMessage = err.message;
+           }
+
+          setError(userErrorMessage);
+          setCaption(null); // Ensure caption is cleared on error
+
+          toast({
+            title: "Generation Error",
+            description: userErrorMessage,
+            variant: "destructive",
+            duration: 9000, // Give more time to read potentially longer error messages
+          });
+      } finally {
+          setIsLoading(false); // Ensure loading indicator stops
+      }
+  }
 
   const handleUploadClick = () => {
     // Clear previous error/caption when initiating a new upload via click
     if (!isLoading) {
-        setError(null);
-        setCaption(null);
-        // Keep the preview if it exists, it will be replaced on file selection
-        // setImagePreviewUrl(null);
+        // We don't reset the caption/error here anymore, only on successful file load/generation attempt
+        // setError(null);
+        // setCaption(null);
         fileInputRef.current?.click();
     }
   };
 
   // Drag and Drop Handlers
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Necessary to allow dropping
+    event.preventDefault();
     event.stopPropagation();
-     // Optionally add visual feedback
-      event.currentTarget.classList.add('border-primary/50'); // Add subtle border highlight
+    event.currentTarget.classList.add('border-primary/50');
   };
 
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-     // Optionally remove visual feedback
-      event.currentTarget.classList.remove('border-primary/50'); // Remove highlight
+    event.currentTarget.classList.remove('border-primary/50');
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    // Optionally remove visual feedback
-    event.currentTarget.classList.remove('border-primary/50'); // Remove highlight
+    event.currentTarget.classList.remove('border-primary/50');
 
-    if (isLoading) return; // Don't allow drop while loading
+    if (isLoading) return;
 
     const files = event.dataTransfer.files;
     if (files && files.length > 0) {
-        // Simulate file input change event
         const simulatedEvent = {
             target: { files }
-        } as unknown as ChangeEvent<HTMLInputElement>; // Type assertion
+        } as unknown as ChangeEvent<HTMLInputElement>;
         handleFileChange(simulatedEvent);
     }
   };
 
 
   return (
-     // Use a simpler, cleaner card styling
-    <Card className="w-full max-w-lg mx-auto shadow-md rounded-lg border border-border/50 bg-card">
-      <CardHeader className="border-b border-border/50 p-4">
-        <CardTitle className="flex items-center gap-2 text-base font-medium text-foreground">
-          <ImageIcon className="h-4 w-4 text-primary" />
-          AI Image Caption Generator
+    <Card className="w-full max-w-lg mx-auto shadow-lg rounded-xl border border-border/30 bg-card/80 backdrop-blur-sm">
+      <CardHeader className="border-b border-border/30 p-4">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Sparkles className="h-5 w-5 text-primary" />
+          AI Image Captioner
         </CardTitle>
-         {/* Removed description for minimalism */}
-         {/* <CardDescription className="text-xs text-muted-foreground mt-1">
-          Upload an image and let AI generate a caption for you.
-        </CardDescription> */}
       </CardHeader>
-      <CardContent className="p-4 md:p-6 space-y-4">
+      <CardContent className="p-4 md:p-6 space-y-5">
         {/* File Input (Hidden) */}
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept="image/jpeg,image/png,image/webp,image/gif" // Be more specific
+          accept="image/jpeg,image/png,image/webp,image/gif"
           className="hidden"
-          disabled={isLoading}
+          disabled={isLoading} // Disable during any loading state
         />
 
-        {/* Upload Area / Image Preview - Minimal Styling */}
-        <div
+        {/* Upload Area / Image Preview */}
+         <div
           className={cn(
-            "relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-border/60 bg-background/30 p-4 text-center transition-colors hover:border-primary/40 hover:bg-accent/30", // Lighter dashed border, minimal background
-            isLoading && "cursor-wait opacity-70",
-            error && "border-destructive/50 bg-destructive/5" // Minimal error indication
+            "relative flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/50 p-4 text-center transition-all duration-300 ease-in-out hover:border-primary/60 hover:bg-accent/50",
+            "overflow-hidden", // Added overflow hidden
+            isLoading && imagePreviewUrl && "cursor-default opacity-70", // Dim preview slightly when generating caption
+            isLoading && !imagePreviewUrl && "cursor-wait opacity-70", // Upload area loading state
+            error && !isLoading && "border-destructive/60 bg-destructive/10", // More prominent error state
+            imagePreviewUrl && !isLoading && "border-primary/30" // Subtle border when image is loaded
           )}
-          onClick={handleUploadClick} // Allow click to upload
+          onClick={!imagePreviewUrl ? handleUploadClick : undefined} // Only allow click to upload if no image yet
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           aria-disabled={isLoading}
           role="button"
-          tabIndex={0} // Make it focusable
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleUploadClick(); }} // Keyboard accessibility
+          tabIndex={imagePreviewUrl ? -1 : 0} // Only focusable when it's an upload area
+          onKeyDown={(e) => { if (!imagePreviewUrl && (e.key === 'Enter' || e.key === ' ')) handleUploadClick(); }}
         >
-           {/* Absolute positioning for overlay elements */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
-             {isLoading ? (
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="text-xs mt-1">
-                        {imagePreviewUrl ? 'Generating caption...' : 'Processing image...'}
-                    </p>
-                </div>
-             ) : imagePreviewUrl ? null : ( // Only show upload prompt if not loading and no image
-                <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                  <Upload className="h-7 w-7" />
-                  <p className="font-medium text-sm mt-1">Drag & drop or click here</p>
-                  <p className="text-xs">Max 10MB (JPG, PNG, WEBP, GIF)</p>
-                </div>
-             )}
+          {/* Overlay for Loading/Upload Prompt */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10 bg-gradient-to-t from-background/10 to-transparent">
+            {isLoading && !imagePreviewUrl ? ( // Loading state during file read/validation
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                <p className="text-sm mt-1">Processing...</p>
+              </div>
+            ) : !imagePreviewUrl ? ( // Initial Upload Prompt
+              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/80">
+                <Upload className="h-8 w-8" />
+                <p className="font-medium text-base mt-2">Drag & drop or click here</p>
+                <p className="text-xs">Max 10MB (JPG, PNG, WEBP, GIF)</p>
+              </div>
+            ) : null } {/* Don't show upload prompt if image is loaded */}
           </div>
 
-           {/* Image Preview Layer (Below Overlay) */}
+          {/* Image Preview Layer */}
           {imagePreviewUrl && (
             <div className="relative w-full h-full flex items-center justify-center">
+               {/* Added 'absolute inset-0' to make Image fill the container */}
               <Image
                 src={imagePreviewUrl}
                 alt="Image preview"
-                 // Use layout="fill" and objectFit="contain" for better responsiveness within the container
                 layout="fill"
-                objectFit="contain"
-                className="rounded-md opacity-90" // Slightly transparent
+                objectFit="contain" // Changed from cover to contain
+                className={cn(
+                    "rounded-md transition-opacity duration-300",
+                    isLoading ? "opacity-50" : "opacity-100" // Dim image during caption generation
+                 )}
                 data-ai-hint="uploaded image preview"
               />
-               {/* Change Button Overlay (only when not loading) */}
-               {!isLoading && (
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   onClick={(e) => { e.stopPropagation(); handleUploadClick(); }} // Prevent triggering div click
-                   className="absolute bottom-2 right-2 z-20 bg-background/70 backdrop-blur-sm text-xs px-2 py-1 h-auto border-border/70 hover:bg-background/90" // Positioned button
-                 >
-                   <Upload className="mr-1 h-3 w-3" /> Change
-                 </Button>
-               )}
+              {/* Change Button Overlay (only when not loading) */}
+              {!isLoading && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleUploadClick(); }}
+                  className="absolute bottom-3 right-3 z-20 bg-background/80 backdrop-blur-sm text-xs px-3 py-1.5 h-auto border-border/70 shadow-sm hover:bg-background"
+                >
+                  <Upload className="mr-1.5 h-3.5 w-3.5" /> Change Image
+                </Button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Error Display - Minimal */}
-        {error && !isLoading && ( // Show error only when not loading
-          <Alert variant="destructive" className="rounded-md border-destructive/40 bg-destructive/10 p-3 text-sm">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="font-medium text-xs mb-0.5">Error</AlertTitle>
-            {/* Ensure long error messages wrap */}
-             <AlertDescription className="text-destructive/90 break-words">{error}</AlertDescription>
+
+         {/* Configuration Options - Only show if an image is uploaded */}
+        {imagePreviewUrl && !isLoading && (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {/* Caption Style Dropdown */}
+                <div className="space-y-1.5">
+                    <Label htmlFor="caption-style" className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                         <Wand2 className="h-3.5 w-3.5" /> Caption Style
+                    </Label>
+                    <Select value={captionStyle} onValueChange={(value) => setCaptionStyle(value as CaptionStyle)} disabled={isLoading}>
+                        <SelectTrigger id="caption-style" className="w-full h-9 text-xs">
+                            <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                            <SelectItem value="formal">Formal</SelectItem>
+                            <SelectItem value="humorous">Humorous</SelectItem>
+                            <SelectItem value="poetic">Poetic</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Language Dropdown */}
+                <div className="space-y-1.5">
+                    <Label htmlFor="language" className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Languages className="h-3.5 w-3.5" /> Language
+                    </Label>
+                    <Select value={language} onValueChange={(value) => setLanguage(value as CaptionLanguage)} disabled={isLoading}>
+                        <SelectTrigger id="language" className="w-full h-9 text-xs">
+                            <SelectValue placeholder="Select language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="en">English</SelectItem>
+                            <SelectItem value="es">Spanish</SelectItem>
+                            <SelectItem value="fr">French</SelectItem>
+                            <SelectItem value="de">German</SelectItem>
+                            {/* Add more languages as needed */}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                 {/* Context Input */}
+                 <div className="md:col-span-2 space-y-1.5">
+                     <Label htmlFor="context" className="text-xs font-medium text-muted-foreground">Optional Context (keywords, event, etc.)</Label>
+                    <Textarea
+                        id="context"
+                        placeholder="e.g., birthday party, travel photo in Paris, product shot..."
+                        value={context}
+                        onChange={(e) => setContext(e.target.value)}
+                        className="text-xs min-h-[60px]"
+                        disabled={isLoading}
+                    />
+                 </div>
+            </div>
+        )}
+
+        {/* Generate Button - Only show and enable if image is loaded and not loading */}
+        {imagePreviewUrl && (
+            <Button
+                onClick={handleGenerateClick}
+                disabled={isLoading || !imagePreviewUrl} // Disable if loading or no image
+                className="w-full mt-4"
+                size="lg"
+            >
+                {isLoading ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
+                    </>
+                ) : (
+                    <>
+                        <Sparkles className="mr-2 h-4 w-4" /> Generate Caption
+                    </>
+                )}
+            </Button>
+        )}
+
+
+        {/* Error Display */}
+        {error && !isLoading && (
+          <Alert variant="destructive" className="rounded-lg border-destructive/50 bg-destructive/10 p-3 text-sm mt-4">
+            <AlertCircle className="h-4 w-4 text-destructive" />
+            <AlertTitle className="font-semibold text-xs mb-1">Error</AlertTitle>
+            <AlertDescription className="text-destructive/95 break-words text-xs">{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* Caption Display - Minimal */}
-        {caption && !isLoading && ( // Show caption only when not loading and caption exists
-          <div className="rounded-md border border-border/40 bg-background/40 p-3 space-y-1 animate-in fade-in duration-300">
-             {/* Removed explicit title for minimalism */}
-             {/* <h3 className="text-xs font-semibold uppercase tracking-wider text-primary/80">Generated Caption</h3> */}
-             <p className="text-sm text-foreground leading-snug">{caption}</p>
+        {/* Caption Display */}
+        {caption && !isLoading && (
+          <div className="rounded-lg border border-border/40 bg-gradient-to-tr from-background/30 to-accent/20 p-4 space-y-2 mt-4 animate-in fade-in duration-500 shadow-sm">
+             <h3 className="text-sm font-semibold tracking-wide text-primary flex items-center gap-1.5">
+                 <ImageIcon className="h-4 w-4" /> Generated Caption
+             </h3>
+             <p className="text-base text-foreground/90 leading-relaxed">{caption}</p>
           </div>
         )}
 
-         {/* Initial state prompt (only show if nothing else is displayed) - More subtle */}
+         {/* Initial state prompt (only if nothing else is happening) */}
         {!imagePreviewUrl && !caption && !error && !isLoading && (
-           <div className="text-center text-xs text-muted-foreground py-2">
-              Upload an image to generate a caption.
+           <div className="text-center text-sm text-muted-foreground/70 py-4 border-t border-border/20 mt-4">
+              Upload an image to begin.
             </div>
         )}
+
+         {/* Loading state for caption generation */}
+         {isLoading && imagePreviewUrl && (
+              <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-6 border-t border-border/20 mt-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="text-sm mt-1">Generating your caption...</p>
+              </div>
+         )}
       </CardContent>
     </Card>
   );
 }
+
+    
