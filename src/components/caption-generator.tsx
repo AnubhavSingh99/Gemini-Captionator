@@ -1,11 +1,10 @@
-
 "use client";
 
 import { type ChangeEvent, useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Upload, Image as ImageIcon, Loader2, AlertCircle, Languages, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateImageCaption } from "@/ai/flows/generate-image-caption";
@@ -179,9 +178,6 @@ export default function CaptionGenerator() {
   const handleUploadClick = () => {
     // Clear previous error/caption when initiating a new upload via click
     if (!isLoading) {
-        // We don't reset the caption/error here anymore, only on successful file load/generation attempt
-        // setError(null);
-        // setCaption(null);
         fileInputRef.current?.click();
     }
   };
@@ -217,14 +213,17 @@ export default function CaptionGenerator() {
 
 
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-lg rounded-xl border border-border/30 bg-card/80 backdrop-blur-sm">
-      <CardHeader className="border-b border-border/30 p-4">
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+    <Card className="w-full max-w-lg mx-auto shadow-xl rounded-2xl border border-border/20 bg-card/70 backdrop-blur-md">
+      <CardHeader className="border-b border-border/20 p-5">
+        <CardTitle className="flex items-center gap-2.5 text-xl font-semibold text-foreground">
           <Sparkles className="h-5 w-5 text-primary" />
           AI Image Captioner
         </CardTitle>
+         <CardDescription className="text-sm text-muted-foreground pt-1">
+          Upload an image and let AI craft the perfect caption for you.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 md:p-6 space-y-5">
+      <CardContent className="p-5 md:p-6 space-y-6">
         {/* File Input (Hidden) */}
         <input
           type="file"
@@ -238,60 +237,59 @@ export default function CaptionGenerator() {
         {/* Upload Area / Image Preview */}
          <div
           className={cn(
-            "relative flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/50 p-4 text-center transition-all duration-300 ease-in-out hover:border-primary/60 hover:bg-accent/50",
-            "overflow-hidden", // Added overflow hidden
-            isLoading && imagePreviewUrl && "cursor-default opacity-70", // Dim preview slightly when generating caption
-            isLoading && !imagePreviewUrl && "cursor-wait opacity-70", // Upload area loading state
-            error && !isLoading && "border-destructive/60 bg-destructive/10", // More prominent error state
-            imagePreviewUrl && !isLoading && "border-primary/30" // Subtle border when image is loaded
+            "relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border/40 bg-background/30 p-4 text-center transition-all duration-300 ease-in-out hover:border-primary/50 hover:bg-accent/30",
+            "overflow-hidden",
+            isLoading && imagePreviewUrl && "cursor-default opacity-60",
+            isLoading && !imagePreviewUrl && "cursor-wait opacity-60",
+            error && !isLoading && "border-destructive/50 bg-destructive/5",
+            imagePreviewUrl && !isLoading && "border-primary/20"
           )}
-          onClick={!imagePreviewUrl ? handleUploadClick : undefined} // Only allow click to upload if no image yet
+          onClick={!imagePreviewUrl ? handleUploadClick : undefined}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           aria-disabled={isLoading}
           role="button"
-          tabIndex={imagePreviewUrl ? -1 : 0} // Only focusable when it's an upload area
+          tabIndex={imagePreviewUrl ? -1 : 0}
           onKeyDown={(e) => { if (!imagePreviewUrl && (e.key === 'Enter' || e.key === ' ')) handleUploadClick(); }}
         >
           {/* Overlay for Loading/Upload Prompt */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10 bg-gradient-to-t from-background/10 to-transparent">
-            {isLoading && !imagePreviewUrl ? ( // Loading state during file read/validation
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10 bg-gradient-to-t from-background/5 to-transparent">
+            {isLoading && !imagePreviewUrl ? (
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                <p className="text-sm mt-1">Processing...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm mt-1.5">Processing...</p>
               </div>
-            ) : !imagePreviewUrl ? ( // Initial Upload Prompt
-              <div className="flex flex-col items-center gap-1.5 text-muted-foreground/80">
-                <Upload className="h-8 w-8" />
-                <p className="font-medium text-base mt-2">Drag & drop or click here</p>
+            ) : !imagePreviewUrl ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground/70">
+                <Upload className="h-10 w-10" />
+                <p className="font-medium text-base mt-2.5">Drag & drop or click to upload</p>
                 <p className="text-xs">Max 10MB (JPG, PNG, WEBP, GIF)</p>
               </div>
-            ) : null } {/* Don't show upload prompt if image is loaded */}
+            ) : null }
           </div>
 
           {/* Image Preview Layer */}
           {imagePreviewUrl && (
             <div className="relative w-full h-full flex items-center justify-center">
-               {/* Added 'absolute inset-0' to make Image fill the container */}
               <Image
                 src={imagePreviewUrl}
                 alt="Image preview"
-                layout="fill"
-                objectFit="contain" // Changed from cover to contain
+                fill={true}
+                style={{ objectFit: 'contain' }}
                 className={cn(
-                    "rounded-md transition-opacity duration-300",
-                    isLoading ? "opacity-50" : "opacity-100" // Dim image during caption generation
+                    "rounded-lg transition-opacity duration-300",
+                    isLoading ? "opacity-40" : "opacity-100"
                  )}
                 data-ai-hint="uploaded image preview"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Provide sizes for responsive images
               />
-              {/* Change Button Overlay (only when not loading) */}
               {!isLoading && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); handleUploadClick(); }}
-                  className="absolute bottom-3 right-3 z-20 bg-background/80 backdrop-blur-sm text-xs px-3 py-1.5 h-auto border-border/70 shadow-sm hover:bg-background"
+                  className="absolute bottom-3.5 right-3.5 z-20 bg-background/70 backdrop-blur-sm text-xs px-3 py-1.5 h-auto border-border/60 shadow-md hover:bg-background/90"
                 >
                   <Upload className="mr-1.5 h-3.5 w-3.5" /> Change Image
                 </Button>
@@ -303,14 +301,13 @@ export default function CaptionGenerator() {
 
          {/* Configuration Options - Only show if an image is uploaded */}
         {imagePreviewUrl && !isLoading && (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                {/* Caption Style Dropdown */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-border/20 mt-2">
                 <div className="space-y-1.5">
                     <Label htmlFor="caption-style" className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                         <Wand2 className="h-3.5 w-3.5" /> Caption Style
+                         <Wand2 className="h-4 w-4" /> Caption Style
                     </Label>
                     <Select value={captionStyle} onValueChange={(value) => setCaptionStyle(value as CaptionStyle)} disabled={isLoading}>
-                        <SelectTrigger id="caption-style" className="w-full h-9 text-xs">
+                        <SelectTrigger id="caption-style" className="w-full h-10 text-sm">
                             <SelectValue placeholder="Select style" />
                         </SelectTrigger>
                         <SelectContent>
@@ -322,13 +319,12 @@ export default function CaptionGenerator() {
                     </Select>
                 </div>
 
-                {/* Language Dropdown */}
                 <div className="space-y-1.5">
                     <Label htmlFor="language" className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                        <Languages className="h-3.5 w-3.5" /> Language
+                        <Languages className="h-4 w-4" /> Language
                     </Label>
                     <Select value={language} onValueChange={(value) => setLanguage(value as CaptionLanguage)} disabled={isLoading}>
-                        <SelectTrigger id="language" className="w-full h-9 text-xs">
+                        <SelectTrigger id="language" className="w-full h-10 text-sm">
                             <SelectValue placeholder="Select language" />
                         </SelectTrigger>
                         <SelectContent>
@@ -336,20 +332,18 @@ export default function CaptionGenerator() {
                             <SelectItem value="es">Spanish</SelectItem>
                             <SelectItem value="fr">French</SelectItem>
                             <SelectItem value="de">German</SelectItem>
-                            {/* Add more languages as needed */}
                         </SelectContent>
                     </Select>
                 </div>
 
-                 {/* Context Input */}
                  <div className="md:col-span-2 space-y-1.5">
-                     <Label htmlFor="context" className="text-xs font-medium text-muted-foreground">Optional Context (keywords, event, etc.)</Label>
+                     <Label htmlFor="context" className="text-xs font-medium text-muted-foreground">Optional Context (keywords, event, mood etc.)</Label>
                     <Textarea
                         id="context"
-                        placeholder="e.g., birthday party, travel photo in Paris, product shot..."
+                        placeholder="e.g., birthday party, serene beach, product details..."
                         value={context}
                         onChange={(e) => setContext(e.target.value)}
-                        className="text-xs min-h-[60px]"
+                        className="text-sm min-h-[65px] resize-none"
                         disabled={isLoading}
                     />
                  </div>
@@ -360,17 +354,17 @@ export default function CaptionGenerator() {
         {imagePreviewUrl && (
             <Button
                 onClick={handleGenerateClick}
-                disabled={isLoading || !imagePreviewUrl} // Disable if loading or no image
-                className="w-full mt-4"
+                disabled={isLoading || !imagePreviewUrl}
+                className="w-full mt-4 py-3 text-base font-medium"
                 size="lg"
             >
                 {isLoading ? (
                     <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating...
                     </>
                 ) : (
                     <>
-                        <Sparkles className="mr-2 h-4 w-4" /> Generate Caption
+                        <Sparkles className="mr-2 h-5 w-5" /> Generate Caption
                     </>
                 )}
             </Button>
@@ -379,40 +373,38 @@ export default function CaptionGenerator() {
 
         {/* Error Display */}
         {error && !isLoading && (
-          <Alert variant="destructive" className="rounded-lg border-destructive/50 bg-destructive/10 p-3 text-sm mt-4">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <AlertTitle className="font-semibold text-xs mb-1">Error</AlertTitle>
-            <AlertDescription className="text-destructive/95 break-words text-xs">{error}</AlertDescription>
+          <Alert variant="destructive" className="rounded-xl border-destructive/40 bg-destructive/5 p-3.5 text-sm mt-5">
+            <AlertCircle className="h-4.5 w-4.5 text-destructive" />
+            <AlertTitle className="font-semibold text-sm mb-1">Error Generating Caption</AlertTitle>
+            <AlertDescription className="text-destructive/90 break-words text-xs">{error}</AlertDescription>
           </Alert>
         )}
 
         {/* Caption Display */}
         {caption && !isLoading && (
-          <div className="rounded-lg border border-border/40 bg-gradient-to-tr from-background/30 to-accent/20 p-4 space-y-2 mt-4 animate-in fade-in duration-500 shadow-sm">
-             <h3 className="text-sm font-semibold tracking-wide text-primary flex items-center gap-1.5">
-                 <ImageIcon className="h-4 w-4" /> Generated Caption
+          <div className="rounded-xl border border-border/30 bg-gradient-to-tr from-background/20 to-accent/10 p-4 md:p-5 space-y-2.5 mt-5 animate-in fade-in duration-700 shadow-inner">
+             <h3 className="text-sm font-semibold tracking-wide text-primary flex items-center gap-2">
+                 <ImageIcon className="h-4.5 w-4.5" /> AI Generated Caption
              </h3>
-             <p className="text-base text-foreground/90 leading-relaxed">{caption}</p>
+             <p className="text-base text-foreground/95 leading-relaxed">{caption}</p>
           </div>
         )}
 
          {/* Initial state prompt (only if nothing else is happening) */}
         {!imagePreviewUrl && !caption && !error && !isLoading && (
-           <div className="text-center text-sm text-muted-foreground/70 py-4 border-t border-border/20 mt-4">
-              Upload an image to begin.
-            </div>
+           <CardFooter className="text-center text-sm text-muted-foreground/60 py-5 border-t border-border/10 mt-5 justify-center">
+              <p>Upload an image to let the AI work its magic!</p>
+            </CardFooter>
         )}
 
          {/* Loading state for caption generation */}
          {isLoading && imagePreviewUrl && (
-              <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-6 border-t border-border/20 mt-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <p className="text-sm mt-1">Generating your caption...</p>
+              <div className="flex flex-col items-center justify-center gap-2.5 text-muted-foreground py-8 border-t border-border/10 mt-5">
+                  <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                  <p className="text-sm mt-1.5">Crafting your caption...</p>
               </div>
          )}
       </CardContent>
     </Card>
   );
 }
-
-    
