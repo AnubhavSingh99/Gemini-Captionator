@@ -19,15 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 
-// Helper function to read file as Data URL
-const readFileAsDataURL = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
-};
+const hardcodedHashtags = ["#AI", "#GeminiCaptionator", "#ImageCaption", "#NextJS"];
+const hardcodedEmojis = ["✨", "📸", "🤖", "🎉"];
 
 type CaptionStyle =
   | "default"
@@ -46,6 +39,16 @@ type CaptionStyle =
   | "black_and_white"
   | "retro"
   | "modern";
+
+// Helper function to read file as Data URL
+const readFileAsDataURL = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function CaptionGenerator() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -122,6 +125,25 @@ export default function CaptionGenerator() {
     }
   };
 
+  const saveImageData = async (imageData: string, caption: string | null, style: string, context: string | null) => {
+    try {
+      const res = await fetch("/api/images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageData, caption, style, context }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to save image data");
+      }
+      const data = await res.json();
+      console.log("Image saved:", data);
+    } catch (err) {
+      console.error("Error saving image data:", err);
+    }
+  };
+
   const handleGenerateClick = async () => {
     if (!imagePreviewUrl) {
       toast({
@@ -140,6 +162,10 @@ export default function CaptionGenerator() {
       const input = {
         photoDataUri: imagePreviewUrl,
         context: context || undefined,
+        style: captionStyle || "default",
+        model: "gemini",
+        hashtags: hardcodedHashtags,
+        emojis: hardcodedEmojis,
       };
 
       const result: GenerateImageCaptionOutput = await generateImageCaption(input);
@@ -151,6 +177,8 @@ export default function CaptionGenerator() {
           title: "Caption Generated!",
           description: "Your AI-powered caption is ready.",
         });
+        // Save image data to Firestore
+        await saveImageData(imagePreviewUrl, result.caption, captionStyle, context);
       } else {
         throw new Error("Received an invalid response from the caption service.");
       }
@@ -344,6 +372,7 @@ export default function CaptionGenerator() {
           </CardFooter>
         </Card>
       </main>
+      <ImageHistory />
       <Footer />
     </>
   );

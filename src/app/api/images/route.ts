@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { db } from "../../../lib/firebase";
+import { collection, addDoc, getDocs, query, orderBy, limit } from "firebase/firestore";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,9 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Image data is required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("gemini-captionator");
-    const imagesCollection = db.collection("images");
+    const imagesCollection = collection(db, "images");
 
     const newImage = {
       imageData,
@@ -21,9 +20,9 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
 
-    const result = await imagesCollection.insertOne(newImage);
+    const docRef = await addDoc(imagesCollection, newImage);
 
-    return NextResponse.json({ message: "Image saved", id: result.insertedId });
+    return NextResponse.json({ message: "Image saved", id: docRef.id });
   } catch (error) {
     console.error("Error saving image:", error);
     return NextResponse.json({ error: "Failed to save image" }, { status: 500 });
@@ -32,15 +31,14 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db("gemini-captionator");
-    const imagesCollection = db.collection("images");
+    const imagesCollection = collection(db, "images");
+    const q = query(imagesCollection, orderBy("createdAt", "desc"), limit(20));
+    const querySnapshot = await getDocs(q);
 
-    const images = await imagesCollection
-      .find({})
-      .sort({ createdAt: -1 })
-      .limit(20)
-      .toArray();
+    const images = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
     return NextResponse.json(images);
   } catch (error) {
